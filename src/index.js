@@ -1,7 +1,36 @@
 /* global DEBUG */
 'use strict';
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const Hook = require('require-in-the-middle');
 const path = require('path');
+
+const hookMap = new Map();
+
+// 我们在webpack.config.js中被require, 所以肯定比
+// webpack require loader的时间早, 但是有个情况是
+// 可能存在多个实例对应一个hookMap, 会不会导致类似
+// 线城安全的问题? 然而如果每个实例一个hookMap, 那
+// 就要在apply中实例化hookMap并调用Hook去hook file-loader
+// apply什么时候被调用, 还能不能确保webpack require
+// file-loader之前hook到file-loader是不能确定的, 这里
+// 已经很多地方依赖于webpack和file-loader的具体实现了,
+// 这些东西都不怎么靠谱, 说不定哪天他们改了, 我插件就
+// 跟着挂了...还是就一个hookMap吧, 没人会这么智障搞几个的...
+// 搞了几个出了问题他们自己负责吧...
+Hook(['file-loader'], exports => {
+	const loader = function (...args) {
+		const _emitFile = this.emitFile, src = this.resource;
+		// 虽然这里是个callback, 不过这里是同步调用的,
+		// 所以调用的时候肯定已经有src了
+		this.emitFile = function (...args) {
+			hookMap.set(src, args[0]);
+			_emitFile.apply(this, args);
+		};
+		return exports.apply(this, args);
+	};
+
+	return loader;
+});
 
 function createLinkTags(map, publicPath = '') {
 	const tags = [];
@@ -54,11 +83,17 @@ class PreloadFontPlugin {
 				if (typeof mod.resource !== 'string') {
 					return;
 				}
-				let parts = mod.resource.split('?'), src = parts[0], query = parts[1];
-				if (assetsMap.has(src)) {
+				let parts = mod.resource.split('?'), src = parts[0], query = parts[1], item = assetsMap.get(src);
+				if (item) {
 					// 需要注意的是也可能一个文件被打包到多个chunk, 但是字体应该是只会一一对应
-					const item = assetsMap.get(src);
 					item.file = Object.keys(mod.buildInfo.assets)[0];
+					item.query = query || '';
+				}
+			});
+			hookMap.forEach((val, resource) => {
+				let parts = resource.split('?'), src = parts[0], query = parts[1], item = assetsMap.get(src);
+				if (item && !item.file) {
+					item.file = val;
 					item.query = query || '';
 				}
 			});
@@ -73,9 +108,12 @@ class PreloadFontPlugin {
 				HtmlWebpackPlugin
 					.getHooks(compilation)
 					.alterAssetTagGroups
-					.tap(this.constructor.name, ({ headTags }) => 
-						headTags.push(...createLinkTags(assetsMap, compilation.outputOptions.publicPath))
-					);
+					.tap(this.constructor.name, ({ headTags }) => {
+						const tags = createLinkTags(assetsMap, compilation.outputOptions.publicPath);
+						if (tags.length) {
+							headTags.push(...tags);
+						}
+					});
 			} else {
 				// 因为配置中我们在html-webpack-plugin之前, 所以这里推迟到当前
 				// 阶段最后去hook html-webpack-plugin, 等待它先注册hook到compilation
@@ -83,9 +121,12 @@ class PreloadFontPlugin {
 				// 们自己来推迟
 				process.nextTick(() => {
 					compilation.hooks.htmlWebpackPluginAlterAssetTags
-						.tap(this.constructor.name, ({ head }) => 
-							head.push(...createLinkTags(assetsMap, compilation.outputOptions.publicPath))
-						);
+						.tap(this.constructor.name, ({ head }) => {
+							const tags = createLinkTags(assetsMap, compilation.outputOptions.publicPath);
+							if (tags.length) {
+								head.push(...tags);
+							}
+						});
 				});
 			}
 		});
