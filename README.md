@@ -28,7 +28,8 @@ $ npm i -D preload-font-plugin
                 rel: 'preload',
                 as: 'font',
                 type: 'font/ttf',
-                crossorigin: 'anonymous'
+                crossorigin: 'anonymous',
+                preserveQuery: true
             }
         }),
         new HtmlWebpackPlugin({
@@ -40,7 +41,7 @@ $ npm i -D preload-font-plugin
 output
 
 ```html
-<link rel="preload" type="font/ttf" as="font" href="demo.be372c5a.ttf" crossorigin="anonymous">
+<link rel="preload" type="font/ttf" as="font" href="demo.be372c5a.ttf?ac43b8" crossorigin="anonymous">
 ```
 
 
@@ -49,4 +50,4 @@ output
 
 ## Options
 
-A simple object, whose key is the file relative to `process.cwd()`, value as attributes of `<link>`.
+A simple object, whose key is the file relative to `process.cwd()`, `preserveQuery` query string should be preserved or not, default `false`. other value as attributes of `<link>`.
