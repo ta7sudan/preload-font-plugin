@@ -1,6 +1,6 @@
 {
   "name": "preload-font-plugin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A webpack plugin for font preload",
   "main": "src/index.js",
   "types": "types/index.d.ts",
