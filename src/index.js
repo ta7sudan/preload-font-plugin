@@ -36,12 +36,13 @@ function createLinkTags(map, publicPath = '') {
 	const tags = [];
 	for (let { attr, file, query } of map.values()) {
 		if (file) {
-			if (query) {
+			if (query && attr.preserveQuery) {
 				file += `?${query}`;
 			}
 
 			if (attr) {
 				attr.href = `${publicPath}${file}`;
+				delete attr.preserveQuery;
 			} else {
 				attr = {
 					href: `${file}`,
@@ -66,13 +67,13 @@ class PreloadFontPlugin {
 		this._options = options;
 	}
 	apply(compiler) {
-		const assetsMap = new Map(Object.keys(this._options).map(src => {
-			return [path.resolve(process.cwd(), src.trim()), {
+		const assetsMap = new Map(Object.keys(this._options).map(src =>
+			[path.resolve(process.cwd(), src.trim()), {
 				attr: this._options[src],
 				file: null,
 				query: ''
-			}];
-		}));
+			}]
+		));
 		// 需要在html-webpack-plugin之前拿到文件映射的信息, 意味着
 		// 注册emit需要在它之前, 意味着在配置中的顺序需要在它之前
 		compiler.hooks.emit.tap(this.constructor.name, compilation => {
