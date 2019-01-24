@@ -84,7 +84,7 @@ class PreloadFontPlugin {
 				if (typeof mod.resource !== 'string') {
 					return;
 				}
-				let parts = mod.resource.split('?'), src = parts[0], query = parts[1], item = assetsMap.get(src);
+				let [src, query] = mod.resource.split('?'), item = assetsMap.get(src);
 				if (item) {
 					// 需要注意的是也可能一个文件被打包到多个chunk, 但是字体应该是只会一一对应
 					item.file = Object.keys(mod.buildInfo.assets)[0];
@@ -92,7 +92,7 @@ class PreloadFontPlugin {
 				}
 			});
 			hookMap.forEach((val, resource) => {
-				let parts = resource.split('?'), src = parts[0], query = parts[1], item = assetsMap.get(src);
+				let [src, query] = resource.split('?'), item = assetsMap.get(src);
 				if (item && !item.file) {
 					item.file = val;
 					item.query = query || '';
