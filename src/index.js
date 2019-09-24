@@ -85,7 +85,7 @@ class PreloadFontPlugin {
 					return;
 				}
 				let [src, query] = mod.resource.split('?'), item = assetsMap.get(src);
-				if (item) {
+				if (item && mod.buildInfo && mod.buildInfo.assets) {
 					// 需要注意的是也可能一个文件被打包到多个chunk, 但是字体应该是只会一一对应
 					item.file = Object.keys(mod.buildInfo.assets)[0];
 					item.query = query || '';
